@@ -1,181 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>DJ Timer</title>
-
-<style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fullscreen Timer</title>
+  <style>
     body {
-        margin: 0;
-        background: black;
-        overflow: hidden;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
+      margin: 0;
+      background: black;
+      color: white;
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      user-select: none;
     }
 
-    #setupPanel {
-        position: absolute;
-        top: 20px;
-        left: 20px;
-        right: 20px;
-        color: white;
-        font-family: Arial, sans-serif;
-    }
-
-    label, select, input {
-        font-size: 1.2rem;
+    #menu {
+      position: absolute;
+      top: 20px;
+      width: 100%;
+      text-align: center;
+      display: block;
     }
 
     #timerDisplay {
-        font-size: 22vw;
-        letter-spacing: -0.02em;
-        color: white;
-        text-align: center;
-        font-family: 'Roboto Mono', monospace;
-        user-select: none;
-        -webkit-user-select: none;
+      font-size: 18vw;
+      letter-spacing: 0.5vw;
     }
 
-    /* Neon options */
-    .neon-blue { text-shadow: 0 0 20px #0ff; color: #6cf; }
-    .neon-pink { text-shadow: 0 0 20px #f0f; color: #f6c; }
-    .neon-green { text-shadow: 0 0 20px #0f0; color: #afc; }
-
-    #hiddenButton {
-        display: none;
-        position: absolute;
-        bottom: 30px;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 1.5rem;
-        padding: 12px 26px;
-        border-radius: 10px;
-        background: rgba(255,255,255,0.2);
-        border: 2px solid white;
-        color: white;
+    #controls {
+      display: none;
+      margin-top: 20px;
     }
-</style>
+
+    button {
+      font-size: 22px;
+      padding: 10px 20px;
+      margin: 10px;
+      border-radius: 8px;
+      border: none;
+      background: #444;
+      color: white;
+    }
+
+    select, input {
+      font-size: 20px;
+      padding: 6px;
+      margin: 6px;
+      border-radius: 6px;
+      border: none;
+    }
+  </style>
 </head>
-
 <body>
 
-<div id="setupPanel">
-    <label>Mode: </label>
-    <select id="mode">
-        <option value="countdown">Countdown</option>
-        <option value="countup">Count Up</option>
+  <div id="menu">
+    <select id="modeSelect">
+      <option value="countdown">Countdown</option>
+      <option value="countup">Count Up</option>
     </select>
-    <br><br>
 
-    <label>Font Style: </label>
-    <select id="fontStyle">
-        <option value="default">Default Mono</option>
-        <option value="neon-blue">Neon Blue</option>
-        <option value="neon-pink">Neon Pink</option>
-        <option value="neon-green">Neon Green</option>
-    </select>
-    <br><br>
-
-    <label>Minutes: </label>
-    <input id="minutes" type="number" min="0" value="1">
-
-    <label>Seconds (optional): </label>
-    <input id="seconds" type="number" min="0" max="59" value="0">
-    <br><br>
-
+    <input type="number" id="minutes" placeholder="Minutes" min="0" />
+    <input type="number" id="seconds" placeholder="Seconds" min="0" />
+    
     <button onclick="startTimer()">Start</button>
-</div>
+  </div>
 
-<div id="timerDisplay">00:00:00</div>
+  <div id="timerDisplay">00:00</div>
 
-<button id="hiddenButton" onclick="toggleTimer()">Stop / Reset</button>
+  <div id="controls">
+    <button onclick="stopTimer()">Stop</button>
+    <button onclick="resetTimer()">Reset</button>
+  </div>
 
-<script>
-let interval = null;
-let startTime;
-let targetTime;
-let running = false;
-let mode = "countdown";
+  <script>
+    let timerInterval;
+    let remaining;
+    let mode = "countdown";
 
-document.body.addEventListener("click", () => {
-    if (running) {
-        const btn = document.getElementById("hiddenButton");
-        btn.style.display = btn.style.display === "none" ? "block" : "none";
-    }
-});
+    document.getElementById("modeSelect").addEventListener("change", (e) => {
+      mode = e.target.value;
+    });
 
-function startTimer() {
-    mode = document.getElementById("mode").value;
-
-    // Apply font class
-    const font = document.getElementById("fontStyle").value;
-    const disp = document.getElementById("timerDisplay");
-    disp.className = font === "default" ? "" : font;
-
-    // Time parsing
-    let min = parseInt(document.getElementById("minutes").value || "0");
-    let sec = parseInt(document.getElementById("seconds").value || "0");
-
-    if (mode === "countdown") {
-        targetTime = (min * 60 + sec) * 1000;
+    function formatTime(ms) {
+      let total = Math.floor(ms / 1000);
+      let m = String(Math.floor(total / 60)).padStart(2, "0");
+      let s = String(total % 60).padStart(2, "0");
+      return m + ":" + s;
     }
 
-    // Hide setup, reset hidden button
-    document.getElementById("setupPanel").style.display = "none";
-    document.getElementById("hiddenButton").style.display = "none";
+    function startTimer() {
+      clearInterval(timerInterval);
+      document.getElementById("menu").style.display = "none";
+      document.getElementById("controls").style.display = "none";
 
-    running = true;
-    startTime = performance.now();
-    interval = requestAnimationFrame(update);
-}
+      let mins = parseInt(document.getElementById("minutes").value) || 0;
+      let secs = parseInt(document.getElementById("seconds").value) || 0;
 
-function toggleTimer() {
-    if (!running) return;
-    cancelAnimationFrame(interval);
-    running = false;
-    location.reload(); // easiest clean reset
-}
+      if (mode === "countdown") {
+        remaining = (mins * 60 + secs) * 1000;
+      } else {
+        remaining = 0;
+      }
 
-function update(timestamp) {
-    let elapsed = timestamp - startTime;
+      const start = Date.now();
 
-    if (mode === "countup") {
-        displayTime(elapsed);
-        interval = requestAnimationFrame(update);
-        return;
+      timerInterval = setInterval(() => {
+        let elapsed = Date.now() - start;
+
+        if (mode === "countdown") {
+          let t = remaining - elapsed;
+          if (t <= 0) {
+            clearInterval(timerInterval);
+            t = 0;
+          }
+          document.getElementById("timerDisplay").textContent = formatTime(t);
+        } else {
+          document.getElementById("timerDisplay").textContent = formatTime(elapsed);
+          remaining = elapsed;
+        }
+      }, 100);
     }
 
-    // Countdown mode
-    let remaining = targetTime - elapsed;
-    if (remaining <= 0) {
-        displayTime(0);
-        running = false;
-        return;
+    function stopTimer() {
+      clearInterval(timerInterval);
+      document.getElementById("controls").style.display = "none";
     }
 
-    displayTime(remaining);
-    interval = requestAnimationFrame(update);
-}
+    function resetTimer() {
+      clearInterval(timerInterval);
+      document.getElementById("timerDisplay").textContent = "00:00";
+      document.getElementById("menu").style.display = "block";
+      document.getElementById("controls").style.display = "none";
+    }
 
-function displayTime(ms) {
-    let totalHundredths = Math.floor(ms / 10);
-    let hundredths = totalHundredths % 100;
-    let totalSeconds = Math.floor(totalHundredths / 100);
-    let seconds = totalSeconds % 60;
-    let minutes = Math.floor(totalSeconds / 60);
-
-    document.getElementById("timerDisplay").textContent =
-        `${pad(minutes)}:${pad(seconds)}:${pad(hundredths)}`;
-}
-
-function pad(n) {
-    return n < 10 ? "0" + n : n;
-}
-</script>
-
+    // Tap screen to show/hide Stop/Reset
+    document.body.addEventListener("click", () => {
+      if (document.getElementById("menu").style.display === "none") {
+        const c = document.getElementById("controls");
+        c.style.display = c.style.display === "none" ? "block" : "none";
+      }
+    });
+  </script>
 </body>
 </html>
+
 
