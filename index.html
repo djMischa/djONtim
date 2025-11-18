@@ -1,152 +1,157 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Fullscreen Timer</title>
-  <style>
-    body {
-      margin: 0;
-      background: black;
-      color: white;
-      font-family: Arial, sans-serif;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      user-select: none;
-    }
+<meta charset="UTF-8" />
+<title>DJ Countdown Timer - Neon & Font Select</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&family=Roboto+Mono:wght@700&family=Space+Mono:wght@700&family=Courier+Prime:wght@700&display=swap');
 
-    #menu {
-      position: absolute;
-      top: 20px;
-      width: 100%;
-      text-align: center;
-      display: block;
-    }
+html, body {
+    margin: 0;
+    padding: 0;
+    background: black;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
-    #timerDisplay {
-      font-size: 18vw;
-      letter-spacing: 0.5vw;
-    }
+#setup {
+    text-align: center;
+    color: white;
+}
 
-    #controls {
-      display: none;
-      margin-top: 20px;
-    }
+input, select {
+    font-size: 2rem;
+    padding: 10px 15px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: 2px solid #888;
+    background: #111;
+    color: white;
+    text-align: center;
+}
 
-    button {
-      font-size: 22px;
-      padding: 10px 20px;
-      margin: 10px;
-      border-radius: 8px;
-      border: none;
-      background: #444;
-      color: white;
-    }
+button {
+    font-size: 2rem;
+    padding: 12px 25px;
+    border-radius: 8px;
+    border: none;
+    background: white;
+    color: black;
+    font-weight: bold;
+    margin-top: 10px;
+}
 
-    select, input {
-      font-size: 20px;
-      padding: 6px;
-      margin: 6px;
-      border-radius: 6px;
-      border: none;
-    }
-  </style>
+#timer {
+    display: none;
+    text-align: center;
+    white-space: pre;
+    width: 100%;
+}
+
+#display {
+    font-size: 16vh;
+    font-weight: 900;
+    letter-spacing: 0.01em; /* tighter spacing for separators */
+    font-variant-numeric: tabular-nums; /* monospaced digits */
+}
+
+/* Neon styles */
+.neon-cyan { color: #00ffff; text-shadow: 0 0 10px #00ffff,0 0 20px #00ffff,0 0 40px #00ffff; }
+.neon-magenta { color: #ff00ff; text-shadow: 0 0 10px #ff00ff,0 0 20px #ff00ff,0 0 40px #ff00ff; }
+.neon-green { color: #00ff00; text-shadow: 0 0 10px #00ff00,0 0 20px #00ff00,0 0 40px #00ff00; }
+.classic-white { color: white; text-shadow: none; }
+</style>
 </head>
 <body>
 
-  <div id="menu">
-    <select id="modeSelect">
-      <option value="countdown">Countdown</option>
-      <option value="countup">Count Up</option>
+<div id="setup">
+    <input id="timeInput" placeholder="MM or MM:SS" />
+    <br>
+    <select id="fontSelect">
+        <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+        <option value="'Roboto Mono', monospace">Roboto Mono</option>
+        <option value="'Space Mono', monospace">Space Mono</option>
+        <option value="'Courier Prime', monospace">Courier Prime</option>
+        <option value="monospace">System Monospace</option>
     </select>
+    <br>
+    <select id="styleSelect">
+        <option value="classic-white">Classic White</option>
+        <option value="neon-cyan">Neon Cyan</option>
+        <option value="neon-magenta">Neon Magenta</option>
+        <option value="neon-green">Neon Green</option>
+    </select>
+    <br>
+    <button onclick="startTimer()">START</button>
+</div>
 
-    <input type="number" id="minutes" placeholder="Minutes" min="0" />
-    <input type="number" id="seconds" placeholder="Seconds" min="0" />
-    
-    <button onclick="startTimer()">Start</button>
-  </div>
+<div id="timer">
+    <span id="display">00:00:00</span>
+</div>
 
-  <div id="timerDisplay">00:00</div>
+<script>
+function startTimer() {
+    const inputStr = document.getElementById("timeInput").value.trim();
+    let minutes = 0, seconds = 0;
 
-  <div id="controls">
-    <button onclick="stopTimer()">Stop</button>
-    <button onclick="resetTimer()">Reset</button>
-  </div>
+    if (!inputStr) { alert("Enter time in minutes (MM) or MM:SS"); return; }
 
-  <script>
-    let timerInterval;
-    let remaining;
-    let mode = "countdown";
-
-    document.getElementById("modeSelect").addEventListener("change", (e) => {
-      mode = e.target.value;
-    });
-
-    function formatTime(ms) {
-      let total = Math.floor(ms / 1000);
-      let m = String(Math.floor(total / 60)).padStart(2, "0");
-      let s = String(total % 60).padStart(2, "0");
-      return m + ":" + s;
+    if (inputStr.includes(":")) {
+        const parts = inputStr.split(":");
+        if (parts.length !==2 || isNaN(parts[0]) || isNaN(parts[1])) { alert("Invalid format"); return; }
+        minutes = parseInt(parts[0]);
+        seconds = parseInt(parts[1]);
+    } else {
+        if (isNaN(inputStr)) { alert("Invalid format"); return; }
+        minutes = parseInt(inputStr);
+        seconds = 0;
     }
 
-    function startTimer() {
-      clearInterval(timerInterval);
-      document.getElementById("menu").style.display = "none";
-      document.getElementById("controls").style.display = "none";
+    let totalMs = (minutes*60 + seconds)*1000;
+    if(totalMs <=0) { alert("Time must be greater than 0"); return; }
 
-      let mins = parseInt(document.getElementById("minutes").value) || 0;
-      let secs = parseInt(document.getElementById("seconds").value) || 0;
+    // apply font & style
+    const font = document.getElementById("fontSelect").value;
+    const styleClass = document.getElementById("styleSelect").value;
+    const displayElem = document.getElementById("display");
+    displayElem.style.fontFamily = font;
+    displayElem.className = '';
+    displayElem.classList.add(styleClass);
 
-      if (mode === "countdown") {
-        remaining = (mins * 60 + secs) * 1000;
-      } else {
-        remaining = 0;
-      }
+    document.getElementById("setup").style.display = "none";
+    document.getElementById("timer").style.display = "block";
 
-      const start = Date.now();
+    const startTime = performance.now();
 
-      timerInterval = setInterval(() => {
-        let elapsed = Date.now() - start;
+    function update(now) {
+        const elapsed = now - startTime;
+        const remaining = totalMs - elapsed;
 
-        if (mode === "countdown") {
-          let t = remaining - elapsed;
-          if (t <= 0) {
-            clearInterval(timerInterval);
-            t = 0;
-          }
-          document.getElementById("timerDisplay").textContent = formatTime(t);
-        } else {
-          document.getElementById("timerDisplay").textContent = formatTime(elapsed);
-          remaining = elapsed;
+        if (remaining <= 0) {
+            displayElem.textContent = "00:00:00";
+            if(navigator.vibrate) navigator.vibrate([200,100,200]);
+            return;
         }
-      }, 100);
+
+        const t = Math.floor(remaining);
+        const m = Math.floor(t/60000);
+        const s = Math.floor((t%60000)/1000);
+        const h = Math.floor((t%1000)/10);
+
+        displayElem.textContent =
+            m.toString().padStart(2,"0") + ":" +
+            s.toString().padStart(2,"0") + ":" +
+            h.toString().padStart(2,"0");
+
+        requestAnimationFrame(update);
     }
 
-    function stopTimer() {
-      clearInterval(timerInterval);
-      document.getElementById("controls").style.display = "none";
-    }
+    requestAnimationFrame(update);
+}
+</script>
 
-    function resetTimer() {
-      clearInterval(timerInterval);
-      document.getElementById("timerDisplay").textContent = "00:00";
-      document.getElementById("menu").style.display = "block";
-      document.getElementById("controls").style.display = "none";
-    }
-
-    // Tap screen to show/hide Stop/Reset
-    document.body.addEventListener("click", () => {
-      if (document.getElementById("menu").style.display === "none") {
-        const c = document.getElementById("controls");
-        c.style.display = c.style.display === "none" ? "block" : "none";
-      }
-    });
-  </script>
 </body>
 </html>
-
-
-
