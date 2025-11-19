@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>DJ Countdown Timer - Neon & Font Select</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&family=Roboto+Mono:wght@700&family=Space+Mono:wght@700&family=Courier+Prime:wght@700&display=swap');
+
+html, body {
+    margin: 0;
+    padding: 0;
+    background: black;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#setup {
+    text-align: center;
+    color: white;
+}
+
+input, select {
+    font-size: 2rem;
+    padding: 10px 15px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: 2px solid #888;
+    background: #111;
+    color: white;
+    text-align: center;
+}
+
+button {
+    font-size: 2rem;
+    padding: 12px 25px;
+    border-radius: 8px;
+    border: none;
+    background: white;
+    color: black;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+#timer {
+    display: none;
+    text-align: center;
+    white-space: pre;
+    width: 100%;
+}
+
+#display {
+    font-size: 16vh;
+    font-weight: 900;
+    letter-spacing: 0.01em;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Neon styles */
+.neon-cyan { color: #00ffff; text-shadow: 0 0 10px #00ffff,0 0 20px #00ffff,0 0 40px #00ffff; }
+.neon-magenta { color: #ff00ff; text-shadow: 0 0 10px #ff00ff,0 0 20px #ff00ff,0 0 40px #ff00ff; }
+.neon-green { color: #00ff00; text-shadow: 0 0 10px #00ff00,0 0 20px #00ff00,0 0 40px #00ff00; }
+.classic-white { color: white; text-shadow: none; }
+</style>
+</head>
+<body>
+
+<div id="setup">
+    <input id="timeInput" placeholder="MM or MM:SS" />
+    <br>
+    <select id="fontSelect">
+        <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+        <option value="'Roboto Mono', monospace">Roboto Mono</option>
+        <option value="'Space Mono', monospace">Space Mono</option>
+        <option value="'Courier Prime', monospace">Courier Prime</option>
+        <option value="monospace">System Monospace</option>
+    </select>
+    <br>
+    <select id="styleSelect">
+        <option value="classic-white">Classic White</option>
+        <option value="neon-cyan">Neon Cyan</option>
+        <option value="neon-magenta">Neon Magenta</option>
+        <option value="neon-green">Neon Green</option>
+    </select>
+    <br>
+    <button onclick="startTimer()">START</button>
+</div>
+
+<div id="timer">
+    <span id="display">00:00:00</span>
+</div>
+
+<script>
+function startTimer() {
+    const inputStr = document.getElementById("timeInput").value.trim();
+    let minutes = 0, seconds = 0;
+
+    if (!inputStr) { alert("Enter time in minutes (MM) or MM:SS"); return; }
+
+    if (inputStr.includes(":")) {
+        const parts = inputStr.split(":");
+        if (parts.length !==2 || isNaN(parts[0]) || isNaN(parts[1])) { alert("Invalid format"); return; }
+        minutes = parseInt(parts[0]);
+        seconds = parseInt(parts[1]);
+    } else {
+        if (isNaN(inputStr)) { alert("Invalid format"); return; }
+        minutes = parseInt(inputStr);
+        seconds = 0;
+    }
+
+    let totalMs = (minutes*60 + seconds)*1000;
+    if(totalMs <=0) { alert("Time must be greater than 0"); return; }
+
+    // apply font & style
+    const font = document.getElementById("fontSelect").value;
+    const styleClass = document.getElementById("styleSelect").value;
+    const displayElem = document.getElementById("display");
+    displayElem.style.fontFamily = font;
+    displayElem.className = '';
+    displayElem.classList.add(styleClass);
+
+    document.getElementById("setup").style.display = "none";
+    document.getElementById("timer").style.display = "block";
+
+    const startTime = performance.now();
+    let countUpStart = null;
+    let countingUp = false;
+
+    // --- NEW: STROBE LOGIC ---
+    let strobeInterval = null;
+    let strobeActive = false;
+
+    function startStrobe() {
+        if (strobeActive) return;
+        strobeActive = true;
+
+        let on = false;
+        strobeInterval = setInterval(() => {
+            document.body.style.background = on ? "white" : "black";
+            on = !on;
+        }, 100); // 10 flashes per second
+    }
+
+    function stopStrobe() {
+        if (!strobeActive) return;
+        strobeActive = false;
+
+        clearInterval(strobeInterval);
+        document.body.style.background = "black"; // reset
+    }
+    // --- END STROBE LOGIC ---
+
+    function update(now) {
+        if (!countingUp) {
+            // COUNTDOWN MODE
+            const elapsed = now - startTime;
+            const remaining = totalMs - elapsed;
+
+            // Trigger strobe at last 5 seconds of countdown
+            if (remaining <= 5000 && !strobeActive) {
+                startStrobe();
+            }
+
+            if (remaining <= 0) {
+                // SWITCH TO COUNT-UP
+                displayElem.style.color = "#1aa3ff";
+                displayElem.style.textShadow = "0 0 15px #1aa3ff, 0 0 30px #1aa3ff";
+                countUpStart = now;
+                countingUp = true;
+                requestAnimationFrame(update);
+                return;
+            }
+
+            const t = Math.floor(remaining);
+            const m = Math.floor(t/60000);
+            const s = Math.floor((t%60000)/1000);
+            const h = Math.floor((t%1000)/10);
+
+            displayElem.textContent =
+                m.toString().padStart(2,"0") + ":" +
+                s.toString().padStart(2,"0") + ":" +
+                h.toString().padStart(2,"0");
+
+        } else {
+            // COUNT-UP MODE
+            const upElapsed = now - countUpStart;
+
+            // Stop strobe 5 seconds after count-up starts
+            if (upElapsed >= 5000 && strobeActive) {
+                stopStrobe();
+            }
+
+            const t = Math.floor(upElapsed);
+            const m = Math.floor(t/60000);
+            const s = Math.floor((t%60000)/1000);
+            const h = Math.floor((t%1000)/10);
+
+            displayElem.textContent =
+                m.toString().padStart(2,"0") + ":" +
+                s.toString().padStart(2,"0") + ":" +
+                h.toString().padStart(2,"0");
+        }
+
+        requestAnimationFrame(update);
+    }
+
+    requestAnimationFrame(update);
+}
+</script>
+
+
+</body>
+</html>
